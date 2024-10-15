@@ -123,7 +123,7 @@ class WaymoCOCOConverter():
             # loop for frames in each sequence
             for frame_index, frame_data in enumerate(sequence_data):
                 if self.frame_index_ones_place is not None:
-                    if frame_index % 10 != self.frame_index_ones_place:
+                    if frame_index % 100 != self.frame_index_ones_place:
                         continue
                 frame = open_dataset.Frame()
                 frame.ParseFromString(bytearray(frame_data.numpy()))
@@ -134,14 +134,20 @@ class WaymoCOCOConverter():
 
         # loop for camera images in each frame
         for camera_image in frame.images:
-            self.process_img(camera_image, frame, frame_index, tfrecord_index)
-            for camera_label in frame.camera_labels:
-                # Ignore camera labels that do not correspond to this camera.
-                if camera_label.name != camera_image.name:
-                    continue
-                self.add_coco_annotation_dict(camera_label)
-            # increment img_index after adding annotations
-            self.img_index += 1
+            if len(frame.camera_labels):
+                add = False
+                # import ipdb; ipdb.set_trace()
+                for camera_label in frame.camera_labels:
+                    # Ignore camera labels that do not correspond to this camera.
+                    if camera_label.name != camera_image.name:
+                        continue
+                    if len(camera_label.labels):
+                        self.add_coco_annotation_dict(camera_label)
+                        add = True
+                if add:
+                    # increment img_index after adding annotations
+                    self.process_img(camera_image, frame, frame_index, tfrecord_index)
+                    self.img_index += 1
 
     def process_img(self, camera_image, frame, frame_index, tfrecord_index):
         img_filename = f'{tfrecord_index:05d}_{frame_index:05d}_camera{camera_image.name}.jpg'  # noqa
